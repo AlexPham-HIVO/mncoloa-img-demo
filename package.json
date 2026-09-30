@@ -1,0 +1,19 @@
+{
+  "name": "resize-web-images",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Resize a folder of images into web-friendly JPG files",
+  "main": "resize.js",
+  "bin": {
+    "resize-web": "./resize.js"
+  },
+  "scripts": {
+    "resize": "node resize.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "sharp": "^0.34.4"
+  }
+}

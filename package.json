@@ -14,6 +14,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "heic-decode": "^2.1.0",
     "sharp": "^0.34.4"
   }
 }

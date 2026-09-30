@@ -4,6 +4,7 @@
 const fs = require("fs/promises");
 const path = require("path");
 const sharp = require("sharp");
+const decodeHeic = require("heic-decode");
 
 const IMAGE_EXTENSIONS = new Set([
   ".jpg",
@@ -15,7 +16,11 @@ const IMAGE_EXTENSIONS = new Set([
   ".tiff",
   ".bmp",
   ".avif",
+  ".heic",
+  ".heif",
 ]);
+
+const HEIC_EXTENSIONS = new Set([".heic", ".heif"]);
 
 const DEFAULTS = {
   maxWidth: 1920,
@@ -31,8 +36,8 @@ Usage:
   node resize.js <input-folder> [options]
 
 The output folder is created next to the input folder.
-Its name is the input folder name plus "output".
-Example: photos  ->  photosoutput
+Its name is the input folder name plus "-output".
+Example: photos  ->  photos-output
 
 Options:
   --max-width <px>    Longest horizontal size. Default: ${DEFAULTS.maxWidth}
@@ -43,6 +48,7 @@ Options:
 
 Images already smaller than the limit are not enlarged.
 Transparency becomes a white background, because JPG has no alpha.
+HEIC and HEIF photos are included and saved as JPG.
 `);
 }
 
@@ -134,11 +140,41 @@ function outputPathFor(inputRoot, outputRoot, sourcePath, usedNames) {
   return path.join(outputRoot, relativeDir, fileName);
 }
 
+let heicQueue = Promise.resolve();
+
+function decodeHeicFile(buffer) {
+  const task = heicQueue.then(() => decodeHeic({ buffer }));
+  heicQueue = task.then(
+    () => {},
+    () => {},
+  );
+  return task;
+}
+
+async function decodeHeicPixels(sourcePath) {
+  const buffer = await fs.readFile(sourcePath);
+  return decodeHeicFile(buffer);
+}
+
+function openImage(sourcePath, decodedHeic) {
+  if (!decodedHeic) {
+    return sharp(sourcePath, { failOn: "none" });
+  }
+
+  const { width, height, data } = decodedHeic;
+  return sharp(Buffer.from(data.buffer, data.byteOffset, data.byteLength), {
+    raw: { width, height, channels: 4 },
+    failOn: "none",
+  });
+}
+
 async function resizeOne(sourcePath, destinationPath, options) {
   await fs.mkdir(path.dirname(destinationPath), { recursive: true });
   const before = (await fs.stat(sourcePath)).size;
+  const ext = path.extname(sourcePath).toLowerCase();
+  const decodedHeic = HEIC_EXTENSIONS.has(ext) ? await decodeHeicPixels(sourcePath) : null;
 
-  await sharp(sourcePath, { failOn: "none" })
+  await openImage(sourcePath, decodedHeic)
     .rotate()
     .resize({
       width: options.maxWidth,

@@ -239,7 +239,7 @@ async function main() {
     throw new Error(`Input folder not found: ${inputRoot}`);
   }
 
-  const outputRoot = path.join(path.dirname(inputRoot), `${path.basename(inputRoot)}-output`);
+  const outputRoot = path.join(path.dirname(inputRoot), 'output', path.basename(inputRoot));
   if (path.resolve(outputRoot) === inputRoot) {
     throw new Error("Output folder would be the same as the input folder");
   }
